@@ -1,1 +1,26 @@
-return function(c,n)local p=game:GetService("Players")local r=game:GetService("RunService")local u=game:GetService("UserInputService")local l=p.LocalPlayer local m=c.TeamMode or"Default"u.InputBegan:Connect(function(i,g)if g then return end if i.KeyCode==c.TeamModeSwitchKey then if m=="Default"then m="AllEnemies"elseif m=="AllEnemies"then m="TeamColors"else m="Default"end n("TeamMode:"..m)end end)local function col(pl)if m=="AllEnemies"then if pl.Team==l.Team then return c.ESPAllyColor else return c.ESPEnemyColor end elseif m=="TeamColors"then return pl.Team and pl.Team.TeamColor.Color or c.ESPNeutralColor else if not pl.Team or not l.Team then return c.ESPNeutralColor end return(pl.Team==l.Team)and c.ESPAllyColor or c.ESPEnemyColor end end local function setup(pl,ch)if not ch or pl==l then return end local hrp=ch:WaitForChild("HumanoidRootPart",5)local hd=ch:WaitForChild("Head",5)if not hrp or not hd then return end local b=Instance.new("BoxHandleAdornment",hrp)b.Adornee=hrp b.Size=Vector3.new(4,6,4)b.AlwaysOnTop=true b.ZIndex=5 b.Transparency=0.3 b.Color3=col(pl)local bb=Instance.new("BillboardGui",hd)bb.Size=UDim2.new(0,200,0,50)bb.StudsOffset=Vector3.new(0,3,0)bb.AlwaysOnTop=true bb.MaxDistance=c.ESPMaxDistance local tl=Instance.new("TextLabel",bb)tl.Size=UDim2.new(1,0,1,0)tl.BackgroundTransparency=1 tl.TextColor3=col(pl)tl.TextScaled=true tl.Font=Enum.Font.SourceSansBold local hum=ch:WaitForChild("Humanoid",5)r.RenderStepped:Connect(function()if hum and hum.Parent then local d=(hrp.Position-l.Character.HumanoidRootPart.Position).Magnitude tl.Text=pl.Name.." - "..math.floor(hum.Health).." HP - "..math.floor(d).." studs"tl.TextColor3=col(pl)b.Color3=col(pl)end end)end local function clear(ch)for _,o in ipairs(ch:GetChildren())do if o:IsA("BoxHandleAdornment")or o:IsA("BillboardGui")then o:Destroy()end end end local function apply()for _,pl in ipairs(p:GetPlayers())do if pl~=l then if pl.Character then clear(pl.Character)setup(pl,pl.Character)end pl.CharacterAdded:Connect(function(ch)clear(ch)setup(pl,ch)end)pl:GetPropertyChangedSignal("Team"):Connect(function()if pl.Character then clear(pl.Character)setup(pl,pl.Character)end end)end end end l:GetPropertyChangedSignal("Team"):Connect(function()apply()end)p.PlayerAdded:Connect(function(pl)pl.CharacterAdded:Connect(function(ch)setup(pl,ch)end)end)p.PlayerRemoving:Connect(function(pl)if pl.Character then clear(pl.Character)end end)apply()end
+local Players=game:GetService("Players")
+local lp=Players.LocalPlayer
+local function teamCheck(p,cfg)return cfg.TeamMode=="AllEnemies" and p.Team~=lp.Team or cfg.TeamMode=="All" end
+local function color(p,cfg)if cfg.TeamMode=="ByTeam" then return p.TeamColor.Color elseif p.Team~=lp.Team then return Color3.new(1,0,0) else return Color3.new(0,1,0) end end
+return function(cfg)
+    local conns={}
+    getgenv().ESP_Connections=conns
+    local function addEsp(plr)
+        if plr==lp then return end
+        plr.CharacterAdded:Connect(function(char)
+            local hrp=char:WaitForChild("HumanoidRootPart")
+            if not teamCheck(plr,cfg) then return end
+            local box=Instance.new("BoxHandleAdornment")
+            box.Name="ESP_Box"box.Adornee=hrp box.Size=Vector3.new(4,6,4)box.AlwaysOnTop=true box.ZIndex=5 box.Transparency=0.45 box.Color3=color(plr,cfg)box.Parent=hrp
+            if plr.Team~=lp.Team then
+                local bb=Instance.new("BillboardGui")bb.Name="ESP_Billboard"bb.Adornee=hrp bb.Size=UDim2.new(4,0,1,0)bb.AlwaysOnTop=true bb.MaxDistance=100
+                local txt=Instance.new("TextLabel",bb)txt.Size=UDim2.new(1,0,1,0)txt.BackgroundTransparency=1 txt.TextColor3=color(plr,cfg)txt.TextScaled=true txt.Font=Enum.Font.SourceSansBold
+                local hum=char:WaitForChild("Humanoid")txt.Text=plr.Name.." - "..math.floor(hum.Health).." HP"
+                hum:GetPropertyChangedSignal("Health"):Connect(function()txt.Text=plr.Name.." - "..math.floor(hum.Health).." HP"end)
+                bb.Parent=hrp
+            end
+        end)
+    end
+    for _,p in pairs(Players:GetPlayers())do addEsp(p)end
+    table.insert(conns,Players.PlayerAdded:Connect(addEsp))
+end

@@ -1,1 +1,24 @@
-return function(c,n)local p=game:GetService("Players")local r=game:GetService("RunService")local l=p.LocalPlayer local g=Instance.new("ScreenGui",game:GetService("CoreGui"))g.Name="TracerUI"local lines={}r.RenderStepped:Connect(function()for _,v in pairs(lines)do v:Destroy()end lines={}for _,pl in ipairs(p:GetPlayers())do if pl~=l and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart")then local hrp=pl.Character.HumanoidRootPart local pos1=workspace.CurrentCamera:WorldToViewportPoint(l.Character.HumanoidRootPart.Position)local pos2=workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)local f=Instance.new("Frame",g)f.Size=UDim2.new(0,2,0,(pos1.Y-pos2.Y))f.Position=UDim2.new(0,pos2.X,0,pos2.Y)f.AnchorPoint=Vector2.new(0.5,0)f.BorderSizePixel=0 f.BackgroundColor3=pl.Team==l.Team and c.ESPAllyColor or c.ESPEnemyColor table.insert(lines,f)end end end)end
+local Players=game:GetService("Players")
+local lp=Players.LocalPlayer
+return function(cfg)
+    local run=game:GetService("RunService").RenderStepped
+    local lines={}
+    run:Connect(function()
+        for _,line in pairs(lines)do line:Destroy()end
+        lines={}
+        local lpc=lp.Character if not lpc then return end
+        local lphrp=lpc:FindFirstChild("HumanoidRootPart")if not lphrp then return end
+        for _,p in pairs(Players:GetPlayers())do
+            if p~=lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart")then
+                if (cfg.TeamMode=="AllEnemies" and p.Team~=lp.Team) or (cfg.TeamMode=="All") then
+                    local hrp=p.Character.HumanoidRootPart
+                    local b=Instance.new("Beam")b.Name="TraceLine"b.FaceCamera=true b.Width0=0.1 b.Width1=0.1
+                    local a0=Instance.new("Attachment",lphrp)local a1=Instance.new("Attachment",hrp)
+                    b.Attachment0=a0 b.Attachment1=a1
+                    b.Color=ColorSequence.new((cfg.TeamMode=="ByTeam")and p.TeamColor.Color or (p.Team~=lp.Team and Color3.new(1,0,0) or Color3.new(0,1,0)))
+                    b.Parent=hrp table.insert(lines,b)
+                end
+            end
+        end
+    end)
+end

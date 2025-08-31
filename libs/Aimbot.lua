@@ -1,68 +1,60 @@
-return function(Config)
-local Players=game:GetService("Players")
-local RunService=game:GetService("RunService")
-local UserInputService=game:GetService("UserInputService")
-local LocalPlayer=Players.LocalPlayer
-local Camera=workspace.CurrentCamera
-local Mouse=LocalPlayer:GetMouse()
-local AimbotEnabled=false
-local PriorityMode=Config.AimbotPriority or "Crosshair"
-UserInputService.InputBegan:Connect(function(input,gp)
-if gp then return end
-if input.KeyCode==Config.AimbotKey then
-AimbotEnabled=not AimbotEnabled
-print("[Aimbot] "..(AimbotEnabled and "Ativado" or "Desativado"))
-elseif input.KeyCode==Config.PrioritySwitchKey then
-PriorityMode=(PriorityMode=="Crosshair") and "Distance" or "Crosshair"
-print("[Aimbot] Prioridade trocada para "..PriorityMode)
-end
-end)
-local function isVisible(part)
-local origin=Camera.CFrame.Position
-local direction=(part.Position-origin).Unit*1000
-local params=RaycastParams.new()
-params.FilterDescendantsInstances={LocalPlayer.Character}
-params.FilterType=Enum.RaycastFilterType.Blacklist
-local result=workspace:Raycast(origin,direction,params)
-return (not result) or (result.Instance:IsDescendantOf(part.Parent))
-end
-local function getBestPart(character)
-local parts={"Head","UpperTorso","HumanoidRootPart"}
-for _,name in ipairs(parts) do
-local part=character:FindFirstChild(name)
-if part and isVisible(part) then
-return part
-end
-end
-return nil
-end
-local function getTarget()
-local closest,dist=nil,math.huge
-for _,p in ipairs(Players:GetPlayers()) do
-if p~=LocalPlayer and p.Character then
-local part=getBestPart(p.Character)
-if part then
-local screenPos,vis=Camera:WorldToViewportPoint(part.Position)
-if vis then
-if PriorityMode=="Crosshair" then
-local mag=(Vector2.new(screenPos.X,screenPos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
-if mag<dist and mag<Config.AimbotFOV then closest,dist=part,mag end
-elseif PriorityMode=="Distance" then
-local mag=(part.Position-LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-if mag<dist then closest,dist=part,mag end
-end
-end
-end
-end
-end
-return closest
-end
-RunService.RenderStepped:Connect(function()
-if not Config.EnableAimbot or not AimbotEnabled then return end
-local target=getTarget()
-if target then
-local pos=Camera:WorldToViewportPoint(target.Position)
-mousemoverel((pos.X-Mouse.X)*Config.AimbotSmoothness,(pos.Y-Mouse.Y)*Config.AimbotSmoothness)
-end
-end)
+local uis=game:GetService("UserInputService")
+local rs=game:GetService("RunService")
+local plrs=game:GetService("Players")
+local lp=plrs.LocalPlayer
+local cam=workspace.CurrentCamera
+
+return function(cfg)
+    local enabled=false
+    local mode="NearestToCrosshair"
+    local toggleKey=cfg.AimbotToggleKey or Enum.KeyCode.Z
+    local switchKey=cfg.AimbotSwitchKey or Enum.KeyCode.X
+
+    uis.InputBegan:Connect(function(i,gp)
+        if gp then return end
+        if i.KeyCode==toggleKey then enabled=not enabled end
+        if i.KeyCode==switchKey then
+            mode=mode=="NearestToCrosshair" and "NearestPlayer" or "NearestToCrosshair"
+        end
+    end)
+
+    local function validTarget(p)
+        if p==lp or not p.Character then return false end
+        if cfg.TeamMode=="AllEnemies" and p.Team==lp.Team then return false end
+        return p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid")
+    end
+
+    local function getBone(c)
+        local h=c:FindFirstChild("Head")if h and cam:WorldToViewportPoint(h.Position) then return h end
+        local t=c:FindFirstChild("UpperTorso")or c:FindFirstChild("Torso")if t then return t end
+        return c:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function nearest()
+        local best,dist=nil,1e9
+        for _,p in pairs(plrs:GetPlayers())do
+            if validTarget(p)then
+                local b=getBone(p.Character)if not b then continue end
+                local pos,vis=cam:WorldToViewportPoint(b.Position)
+                if vis then
+                    if mode=="NearestToCrosshair" then
+                        local d=(Vector2.new(pos.X,pos.Y)-uis:GetMouseLocation()).Magnitude
+                        if d<dist then dist=d best=b end
+                    else
+                        local d=(lp.Character.HumanoidRootPart.Position-b.Position).Magnitude
+                        if d<dist then dist=d best=b end
+                    end
+                end
+            end
+        end
+        return best
+    end
+
+    rs.RenderStepped:Connect(function()
+        if not enabled then return end
+        local b=nearest()
+        if b then
+            cam.CFrame=CFrame.new(cam.CFrame.Position,b.Position)
+        end
+    end)
 end
