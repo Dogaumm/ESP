@@ -1,1 +1,0 @@
-local c=loadfile("utils/Config.lua")()local n=loadfile("utils/Notify.lua")()n("[Main] Init")if c.EnableESP then local e=loadfile("libs/ESP.lua")e(c,n)n("[ESP] OK")end if c.EnableTracers then local t=loadfile("libs/TraceLines.lua")t(c,n)n("[Tracers] OK")end if c.EnableAimbot then local a=loadfile("libs/Aimbot.lua")a(c,n)n("[Aimbot] OK")end

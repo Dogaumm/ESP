@@ -1,1 +1,0 @@
-return{EnableESP=true,EnableAimbot=true,EnableTracers=true,ESPAllyColor=Color3.fromRGB(0,255,0),ESPEnemyColor=Color3.fromRGB(255,0,0),ESPNeutralColor=Color3.fromRGB(255,255,255),ESPMaxDistance=300,AimbotKey=Enum.KeyCode.Z,PrioritySwitchKey=Enum.KeyCode.X,AimbotPriority="Crosshair",AimbotFOV=150,AimbotSmoothness=0.2,TeamMode="Default",TeamModeSwitchKey=Enum.KeyCode.V}
