@@ -1,78 +1,30 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local localPlayer = Players.LocalPlayer
+return function(Config)
+local Players=game:GetService("Players")
+local RunService=game:GetService("RunService")
+local LocalPlayer=Players.LocalPlayer
+local Camera=workspace.CurrentCamera
+local Mouse=LocalPlayer:GetMouse()
 
-local aimInterval = 0.05
-local maxDistance = 2000
-local lastUpdate = 0
-
-local function isEnemy(player)
-    return player ~= localPlayer and (not player.Team or player.Team ~= localPlayer.Team)
+local function getClosest()
+local closest,d=nil,math.huge
+for _,p in pairs(Players:GetPlayers()) do
+if p~=LocalPlayer and p.Character and p.Character:FindFirstChild(Config.AimbotTargetPart) then
+local pos,vis=Camera:WorldToViewportPoint(p.Character[Config.AimbotTargetPart].Position)
+if vis then
+local mag=(Vector2.new(pos.X,pos.Y)-Vector2.new(Mouse.X,Mouse.Y)).Magnitude
+if mag<d and mag<Config.AimbotFOV then closest,d=p.Character[Config.AimbotTargetPart],mag end
+end
+end
+end
+return closest
 end
 
-local function isVisible(part)
-    local origin = localPlayer.Character.HumanoidRootPart.Position
-    local direction = (part.Position - origin).Unit * (part.Position - origin).Magnitude
-    local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {localPlayer.Character}
-    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-
-    local result = Workspace:Raycast(origin, direction, rayParams)
-    return result and result.Instance:IsDescendantOf(part.Parent)
+RunService.RenderStepped:Connect(function()
+if not Config.EnableAimbot then return end
+local t=getClosest()
+if t then
+local pos=Camera:WorldToViewportPoint(t.Position)
+mousemoverel((pos.X-Mouse.X)*Config.AimbotSmoothness,(pos.Y-Mouse.Y)*Config.AimbotSmoothness)
 end
-
-local function getClosestEnemy()
-    local closestEnemy = nil
-    local closestPart = nil
-    local closestDistance = math.huge
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if isEnemy(player) and player.Character then
-            local head = player.Character:FindFirstChild("Head")
-            local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-            local targetPart = nil
-
-            if head and isVisible(head) then
-                targetPart = head
-            elseif rootPart and isVisible(rootPart) then
-                targetPart = rootPart
-            end
-
-            if targetPart then
-                local distance = (targetPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
-                if distance < closestDistance and distance <= maxDistance then
-                    closestEnemy = player
-                    closestPart = targetPart
-                    closestDistance = distance
-                end
-            end
-        end
-    end
-
-    return closestPart
-end
-
-local function aimAtTarget(target)
-    local camera = Workspace.CurrentCamera
-    if target then
-        camera.CFrame = CFrame.new(camera.CFrame.Position, target.Position)
-    end
-end
-
-local function monitorAimBot()
-    RunService.RenderStepped:Connect(function()
-        if tick() - lastUpdate >= aimInterval then
-            lastUpdate = tick()
-
-            local closestEnemyPart = getClosestEnemy()
-            if closestEnemyPart then
-                aimAtTarget(closestEnemyPart)
-            end
-        end
-    end)
-end
-
-task.delay(5, function()
-    monitorAimBot()
 end)
+end
